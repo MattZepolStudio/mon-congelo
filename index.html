@@ -259,11 +259,17 @@ async function login() {
 }
 
 async function ajouterProduit(p) {
+  // Prend le plus petit numéro libre ; la transaction vérifie qu'il est toujours libre
+  // (au cas où l'autre téléphone vient d'ajouter un produit au même moment).
+  const pris = new Set(state.items.map(i => i.n));
   return runTransaction(db, async tx => {
-    const r = await tx.get(reglagesRef);
-    const maxN = state.items.reduce((m, i) => Math.max(m, i.n), 0);
-    const n = Math.max(r.data()?.next || 1, maxN + 1);
-    tx.set(reglagesRef, { next: n + 1 }, { merge: true });
+    let n = 1;
+    for (;;) {
+      while (pris.has(n)) n++;
+      const d = await tx.get(doc(produitsRef, String(n)));
+      if (!d.exists()) break;
+      pris.add(n);
+    }
     tx.set(doc(produitsRef, String(n)), { ...p, n });
     return n;
   });
