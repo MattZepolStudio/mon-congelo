@@ -126,6 +126,13 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; fon
 .row { display: flex; gap: 10px; } .row > * { flex: 1; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 600; z-index: 30; font-size: .95rem; }
+.scanbtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+.scanner { position: fixed; inset: 0; z-index: 40; background: #000; display: flex; flex-direction: column; }
+.scanner #reader { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.scanner #reader video { width: 100% !important; height: 100% !important; object-fit: cover; }
+.scanner .bar { padding: 16px max(16px, env(safe-area-inset-left, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; text-align: center; color: #fff; background: #000; }
+.scanner .bar p { margin: 0; font-weight: 600; }
+.scanner .aim { position: absolute; left: 10%; right: 10%; top: 38%; height: 18%; border: 3px solid #fff; border-radius: 14px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.35); pointer-events: none; }
 @media (max-width: 380px) { .cats { grid-template-columns: repeat(2, 1fr); } }
 @media (prefers-reduced-motion: no-preference) { .sheet { animation: up .22s ease-out; } @keyframes up { from { transform: translateY(30px); opacity: .6; } } }
 </style>
@@ -317,11 +324,12 @@ const head = t => `<div class="sheet-head"><h2>${t}</h2><button class="close" da
 function openAdd() {
   const names = [...new Set(state.items.map(i => i.nom))].sort();
   const tiroirs = Array.from({ length: state.tiroirs }, (_, k) => `<option value="${k + 1}">Tiroir ${k + 1}</option>`).join("");
-  let cat = "viande", qte = 1;
+  let cat = "viande", qte = 1, code = null;
   open(`${head("Nouveau produit")}
     <label class="f">Qu'est-ce que c'est ?
       <input id="fNom" list="noms" placeholder="Ex. : viande hachée" autocomplete="off">
       <datalist id="noms">${names.map(n => `<option value="${esc(n)}">`).join("")}</datalist></label>
+    <button type="button" class="ghost scanbtn" id="fScan"><span aria-hidden="true">📷</span> Scanner le code-barre</button>
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Catégorie
       <div class="cats" id="fCats">${CATS.map(c => `<button type="button" class="cat" data-c="${c.id}" aria-pressed="${c.id === cat}"><span>${c.ic}</span>${c.nom}</button>`).join("")}</div></div>
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Quantité
@@ -343,6 +351,21 @@ function openAdd() {
     if (prev) { cat = prev.cat; sheet.querySelectorAll(".cat").forEach(x => x.setAttribute("aria-pressed", x.dataset.c === cat));
       $("#fUnite").value = prev.unite; $("#fTiroir").value = Math.min(prev.tiroir, state.tiroirs); }
   });
+  const setCat = c => { cat = c; sheet.querySelectorAll(".cat").forEach(x => x.setAttribute("aria-pressed", x.dataset.c === cat)); };
+  $("#fScan").onclick = () => scanner(async found => {
+    code = found;
+    const known = [...state.items].reverse().find(i => i.code === found);
+    if (known) {
+      $("#fNom").value = known.nom; setCat(known.cat); $("#fUnite").value = known.unite;
+      $("#fTiroir").value = Math.min(known.tiroir, state.tiroirs); toast("Produit reconnu"); return;
+    }
+    const btn = $("#fScan"); btn.disabled = true; btn.lastChild.textContent = " Recherche du produit…";
+    const info = await chercherProduit(found);
+    btn.disabled = false; btn.lastChild.textContent = " Scanner le code-barre";
+    if (!$("#fNom")) return;
+    if (info) { $("#fNom").value = info.nom; if (info.cat) setCat(info.cat); toast("Produit trouvé"); }
+    else { $("#fNom").focus(); toast("Produit inconnu, écrivez son nom"); }
+  });
   const upd = () => $("#fQte").textContent = qte;
   $("#fMoins").onclick = () => { qte = Math.max(1, qte - 1); upd(); };
   $("#fPlus").onclick = () => { qte++; upd(); };
@@ -350,11 +373,64 @@ function openAdd() {
     const nom = $("#fNom").value.trim();
     if (!nom) { $("#fNom").focus(); $("#fNom").placeholder = "Indiquez le nom du produit"; return; }
     const b = $("#fOk"); b.disabled = true; b.textContent = "Enregistrement…";
-    ajouterProduit({ nom, cat, tiroir: +$("#fTiroir").value, qte, unite: $("#fUnite").value, date: $("#fDate").value || daysAgo(0) })
+    ajouterProduit({ nom, cat, ...(code ? { code } : {}), tiroir: +$("#fTiroir").value, qte, unite: $("#fUnite").value, date: $("#fDate").value || daysAgo(0) })
       .then(n => showNumber(n, nom))
       .catch(e => { console.error(e); b.disabled = false; b.textContent = "Ajouter au congélateur"; toast("Pas de connexion, réessayez"); });
   };
-  setTimeout(() => $("#fNom").focus(), 50);
+}
+
+/* Scanner de code-barre */
+let scanLib = null;
+function loadScanLib() {
+  if (window.Html5Qrcode || window.__Html5QrcodeLibrary__) return Promise.resolve();
+  return scanLib ||= new Promise((ok, ko) => {
+    const s = document.createElement("script");
+    s.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+    s.onload = ok; s.onerror = () => { scanLib = null; ko(new Error("lib")); };
+    document.head.appendChild(s);
+  });
+}
+async function scanner(onCode) {
+  const el = document.createElement("div");
+  el.className = "scanner";
+  el.innerHTML = `<div id="reader"></div><div class="aim"></div>
+    <div class="bar"><p id="scanMsg">Ouverture de la caméra…</p><button class="ghost" id="scanCancel">Annuler</button></div>`;
+  document.body.appendChild(el);
+  let qr = null, done = false;
+  const stop = async () => { done = true; try { if (qr?.isScanning) await qr.stop(); qr?.clear(); } catch (e) {} el.remove(); };
+  el.querySelector("#scanCancel").onclick = stop;
+  try {
+    await loadScanLib();
+    if (done) return;
+    const L = window.__Html5QrcodeLibrary__ || window, F = L.Html5QrcodeSupportedFormats;
+    qr = new L.Html5Qrcode("reader", { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+    await qr.start({ facingMode: "environment" }, { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.8), height: Math.floor(h * 0.18) }) },
+      text => { if (done) return; navigator.vibrate?.(80); stop(); onCode(text); }, () => {});
+    if (done) { stop(); return; }
+    el.querySelector("#scanMsg").textContent = "Visez le code-barre du paquet";
+  } catch (e) {
+    console.error(e);
+    el.querySelector("#scanMsg").textContent = e.message === "lib"
+      ? "Pas de connexion internet : impossible d'ouvrir le scanner."
+      : "La caméra n'est pas accessible. Autorisez-la dans les réglages du navigateur.";
+  }
+}
+async function chercherProduit(code) {
+  try {
+    const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name_fr,product_name,generic_name_fr,categories_tags`);
+    if (!r.ok) return null;
+    const p = (await r.json()).product; if (!p) return null;
+    const nom = (p.product_name_fr || p.product_name || p.generic_name_fr || "").trim();
+    if (!nom) return null;
+    const t = (p.categories_tags || []).join(" ");
+    const cat = /fish|seafood|poisson/.test(t) ? "poisson"
+      : /meat|viande|poultr|volaille/.test(t) ? "viande"
+      : /vegetable|legume|fruit/.test(t) ? "legumes"
+      : /bread|pain|dessert|ice-cream|glace|viennoiser|pastr|cake/.test(t) ? "pain"
+      : /meal|plat|pizza|prepared/.test(t) ? "plats" : null;
+    return { nom: nom.charAt(0).toUpperCase() + nom.slice(1), cat };
+  } catch (e) { return null; }
 }
 
 function showNumber(n, nom) {
