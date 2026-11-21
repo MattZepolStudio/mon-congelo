@@ -126,6 +126,12 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; fon
 .row { display: flex; gap: 10px; } .row > * { flex: 1; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 600; z-index: 30; font-size: .95rem; }
+.catline { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.catline b { font-weight: 700; }
+.linkbtn { border: none; background: none; color: var(--accent); font-weight: 700; padding: 4px 0; font-size: .95rem; }
+.metabtn { text-align: left; background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 10px 12px; }
+.metabtn small { display: block; color: var(--accent); font-size: .8rem; }
+.metabtn strong { font-size: 1rem; }
 .namerow { display: flex; gap: 8px; align-items: stretch; }
 .namerow input { flex: 1; min-width: 0; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 1.05rem; }
 .scanbtn { flex: none; width: 64px; border: none; border-radius: 14px; background: var(--accent-soft); color: var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-weight: 700; }
@@ -197,6 +203,22 @@ const CATS = [
 ];
 const catOf = id => CATS.find(c => c.id === id) || CATS[5];
 const UNITS = ["portions", "sachets", "pièces", "g"];
+
+/* Devine la catégorie d'après le nom (dans cet ordre de priorité) */
+const MOTS = [
+  ["plats", "plat|lasagne|gratin|soupe|veloute|bolognaise|sauce|hachis|parmentier|pizza|quiche|couscous|chili|curry|tajine|paella|risotto|pates|spaghetti|tagliatelle|raviolis?|cannelloni|moussaka|blanquette|bourguignon|pot au feu|ratatouille|puree|cassoulet|choucroute|nems?|samoussa|reste|tourte|feuillete|cordon bleu|nuggets?|burger|hamburger"],
+  ["pain", "pain|baguette|brioche|croissant|viennoiserie|gateau|tarte|glace|sorbet|crepe|gaufre|cookie|muffin|buche|dessert|pate feuilletee|pate brisee|pate sablee|pate a pizza|madeleine|beignet|clafoutis|fondant|cake"],
+  ["poisson", "poisson|cabillaud|saumon|thon|colin|merlu|lieu|truite|sole|dorade|bar|crevette|gambas|moules?|calamar|encornet|fruits de mer|saint jacques|noix de saint jacques|sardine|maquereau|lotte|limande|surimi|crabe|homard|langoustine|seiche|poulpe|eglefin|haddock|perche|sandre|brochet"],
+  ["viande", "viande|poulet|dinde|boeuf|steak|hache|veau|porc|agneau|mouton|canard|saucisse|merguez|chipolata|lardons?|jambon|roti|escalope|cote|cotelette|cuisse|aiguillette|filet mignon|gigot|lapin|magret|poitrine|bacon|chorizo|boudin|andouillette|paupiette|brochette|entrecote|bavette|faux filet|onglet|tournedos|volaille|pintade|caille|chevreuil|sanglier|gibier|abats|foie|rognon|osso bucco"],
+  ["legumes", "legume|haricot|petits? pois|pois|carotte|brocoli|epinard|chou|choux|chou fleur|courgette|poivron|tomate|champignon|cepe|girolle|patate|pomme de terre|pommes de terre|frite|potatoes|rosti|potiron|potimarron|courge|butternut|poireau|oignon|echalote|ail|persil|ciboulette|basilic|coriandre|herbes?|fruit|fraise|framboise|myrtille|mure|cassis|groseille|mangue|cerise|ananas|peche|abricot|prune|mirabelle|pomme|poire|rhubarbe|mais|asperge|artichaut|aubergine|celeri|navet|fenouil|feve|lentille|pois chiche|edamame|soja|salsifis|panais|betterave|avocat|citron"],
+];
+const MOTS_RE = MOTS.map(([c, m]) => [c, new RegExp(`\\b(?:${m})(?:s|x)?\\b`)]);
+const norm = t => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]+/g, " ");
+function devinerCat(nom) {
+  const t = " " + norm(nom) + " ";
+  for (const [c, re] of MOTS_RE) if (re.test(t)) return c;
+  return null;
+}
 
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
 // ===== Firebase =====
@@ -336,7 +358,7 @@ const head = t => `<div class="sheet-head"><h2>${t}</h2><button class="close" da
 function openAdd() {
   const names = [...new Set(state.items.map(i => i.nom))].sort();
   const tiroirs = Array.from({ length: state.tiroirs }, (_, k) => `<option value="${k + 1}">Tiroir ${k + 1}</option>`).join("");
-  let cat = "viande", qte = 1, code = null;
+  let cat = "autre", catManuelle = false, qte = 1, code = null;
   open(`${head("Nouveau produit")}
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem"><label for="fNom">Qu'est-ce que c'est ?</label>
       <div class="namerow">
@@ -344,8 +366,9 @@ function openAdd() {
         <button type="button" class="scanbtn" id="fScan" aria-label="Scanner le code-barre" title="Scanner le code-barre"><span>📷</span><small>Scanner</small></button>
       </div>
       <datalist id="noms">${names.map(n => `<option value="${esc(n)}">`).join("")}</datalist></div>
-    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Catégorie
-      <div class="cats" id="fCats">${CATS.map(c => `<button type="button" class="cat" data-c="${c.id}" aria-pressed="${c.id === cat}"><span>${c.ic}</span>${c.nom}</button>`).join("")}</div></div>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">
+      <div class="catline"><span>Catégorie : <b id="fCatLbl">📦 Autre</b></span><button type="button" class="linkbtn" id="fCatEdit">Modifier</button></div>
+      <div class="cats" id="fCats" hidden>${CATS.map(c => `<button type="button" class="cat" data-c="${c.id}" aria-pressed="${c.id === cat}"><span>${c.ic}</span>${c.nom}</button>`).join("")}</div></div>
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Quantité
       <div class="stepper"><button type="button" id="fMoins" aria-label="Moins">−</button>
         <output id="fQte">1</output><button type="button" id="fPlus" aria-label="Plus">+</button></div></div>
@@ -356,28 +379,39 @@ function openAdd() {
     <label class="f">Date de congélation<input id="fDate" type="date" value="${daysAgo(0)}"></label>
     <button class="primary" id="fOk">Ajouter au congélateur</button>`);
   const sheet = $(".sheet");
+  const setCat = c => {
+    cat = c; const k = catOf(c);
+    sheet.querySelectorAll(".cat").forEach(x => x.setAttribute("aria-pressed", x.dataset.c === cat));
+    $("#fCatLbl").textContent = `${k.ic} ${k.nom}`;
+  };
+  setCat("autre");
   sheet.querySelector("#fCats").addEventListener("click", e => {
     const b = e.target.closest(".cat"); if (!b) return;
-    cat = b.dataset.c; sheet.querySelectorAll(".cat").forEach(x => x.setAttribute("aria-pressed", x === b));
+    catManuelle = true; setCat(b.dataset.c); $("#fCats").hidden = true; $("#fCatEdit").textContent = "Modifier";
+  });
+  $("#fCatEdit").onclick = () => { const g = $("#fCats"); g.hidden = !g.hidden; $("#fCatEdit").textContent = g.hidden ? "Modifier" : "Fermer"; };
+  const dejaVu = nom => [...state.items].reverse().find(i => i.nom.toLowerCase() === nom.trim().toLowerCase());
+  sheet.querySelector("#fNom").addEventListener("input", e => {
+    if (catManuelle) return;
+    const prev = dejaVu(e.target.value);
+    setCat(prev ? prev.cat : devinerCat(e.target.value) || "autre");
   });
   sheet.querySelector("#fNom").addEventListener("change", e => {
-    const prev = [...state.items].reverse().find(i => i.nom.toLowerCase() === e.target.value.trim().toLowerCase());
-    if (prev) { cat = prev.cat; sheet.querySelectorAll(".cat").forEach(x => x.setAttribute("aria-pressed", x.dataset.c === cat));
-      $("#fUnite").value = prev.unite; $("#fTiroir").value = Math.min(prev.tiroir, state.tiroirs); }
+    const prev = dejaVu(e.target.value);
+    if (prev) { $("#fUnite").value = prev.unite; $("#fTiroir").value = Math.min(prev.tiroir, state.tiroirs); }
   });
-  const setCat = c => { cat = c; sheet.querySelectorAll(".cat").forEach(x => x.setAttribute("aria-pressed", x.dataset.c === cat)); };
   $("#fScan").onclick = () => scanner(async found => {
     code = found;
     const known = [...state.items].reverse().find(i => i.code === found);
     if (known) {
-      $("#fNom").value = known.nom; setCat(known.cat); $("#fUnite").value = known.unite;
+      $("#fNom").value = known.nom; if (!catManuelle) setCat(known.cat); $("#fUnite").value = known.unite;
       $("#fTiroir").value = Math.min(known.tiroir, state.tiroirs); toast("Produit reconnu"); return;
     }
     const btn = $("#fScan"), nomIn = $("#fNom"); btn.disabled = true; nomIn.placeholder = "Recherche du produit…";
     const info = await chercherProduit(found);
     btn.disabled = false; nomIn.placeholder = "Ex. : viande hachée";
     if (!$("#fNom")) return;
-    if (info) { $("#fNom").value = info.nom; if (info.cat) setCat(info.cat); toast("Produit trouvé"); }
+    if (info) { $("#fNom").value = info.nom; if (!catManuelle) setCat(info.cat || devinerCat(info.nom) || "autre"); toast("Produit trouvé"); }
     else { $("#fNom").focus(); toast("Produit inconnu, écrivez son nom"); }
   });
   const upd = () => $("#fQte").textContent = qte;
@@ -438,11 +472,12 @@ async function chercherProduit(code) {
     const nom = (p.product_name_fr || p.product_name || p.generic_name_fr || "").trim();
     if (!nom) return null;
     const t = (p.categories_tags || []).join(" ");
-    const cat = /fish|seafood|poisson/.test(t) ? "poisson"
+    const cat = devinerCat(nom) || (/potato|pomme-de-terre|frite|fries/.test(t) ? "legumes"
+      : /fish|seafood|poisson/.test(t) ? "poisson"
       : /meat|viande|poultr|volaille/.test(t) ? "viande"
       : /vegetable|legume|fruit/.test(t) ? "legumes"
       : /bread|pain|dessert|ice-cream|glace|viennoiser|pastr|cake/.test(t) ? "pain"
-      : /meal|plat|pizza|prepared/.test(t) ? "plats" : null;
+      : /meal|plat|pizza|prepared/.test(t) ? "plats" : null);
     return { nom: nom.charAt(0).toUpperCase() + nom.slice(1), cat };
   } catch (e) { return null; }
 }
@@ -466,14 +501,21 @@ function openItem(n) {
       <div><small>Congelé le</small><strong>${fmtDate(i.date)}</strong></div>
       <div><small>Depuis</small><strong>${ageText(ageDays(i.date))}</strong></div>
       <div><small>Rangement</small><strong>Tiroir ${i.tiroir}</strong></div>
-      <div><small>Catégorie</small><strong>${c.nom}</strong></div>
+      <button type="button" class="metabtn" id="dCat"><small>Catégorie · modifier</small><strong>${c.ic} ${c.nom}</strong></button>
     </div>
+    <div class="cats" id="dCats" hidden>${CATS.map(k => `<button type="button" class="cat" data-c="${k.id}" aria-pressed="${k.id === i.cat}"><span>${k.ic}</span>${k.nom}</button>`).join("")}</div>
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Combien en reste-t-il ?
       <div class="stepper"><button type="button" id="dMoins" aria-label="Moins">−</button>
         <output id="dQte">${qte}<small>${i.unite}</small></output>
         <button type="button" id="dPlus" aria-label="Plus">+</button></div></div>
     <button class="primary" id="dOk">Enregistrer</button>
     <div id="dDel"><button class="danger" id="dAll" style="width:100%">Tout est mangé, retirer du congélateur</button></div>`);
+  $("#dCat").onclick = () => { $("#dCats").hidden = !$("#dCats").hidden; };
+  $("#dCats").addEventListener("click", e => {
+    const b = e.target.closest(".cat"); if (!b) return;
+    updateDoc(doc(produitsRef, String(n)), { cat: b.dataset.c }).catch(denied);
+    close(); toast(`Catégorie changée : ${catOf(b.dataset.c).nom}`);
+  });
   const upd = () => { $("#dQte").innerHTML = `${qte}<small>${i.unite}</small>`; $("#dOk").textContent = qte === 0 ? "Retirer du congélateur" : "Enregistrer"; };
   $("#dMoins").onclick = () => { qte = Math.max(0, qte - 1); upd(); };
   $("#dPlus").onclick = () => { qte++; upd(); };
