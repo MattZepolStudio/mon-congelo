@@ -126,7 +126,12 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; fon
 .row { display: flex; gap: 10px; } .row > * { flex: 1; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 600; z-index: 30; font-size: .95rem; }
-.scanbtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+.namerow { display: flex; gap: 8px; align-items: stretch; }
+.namerow input { flex: 1; min-width: 0; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 1.05rem; }
+.scanbtn { flex: none; width: 64px; border: none; border-radius: 14px; background: var(--accent-soft); color: var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-weight: 700; }
+.scanbtn span { font-size: 1.3rem; line-height: 1; }
+.scanbtn small { font-size: .68rem; }
+.scanbtn:disabled { opacity: .5; }
 .scanner { position: fixed; inset: 0; z-index: 40; background: #000; display: flex; flex-direction: column; }
 .scanner #reader { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .scanner #reader video { width: 100% !important; height: 100% !important; object-fit: cover; }
@@ -326,10 +331,12 @@ function openAdd() {
   const tiroirs = Array.from({ length: state.tiroirs }, (_, k) => `<option value="${k + 1}">Tiroir ${k + 1}</option>`).join("");
   let cat = "viande", qte = 1, code = null;
   open(`${head("Nouveau produit")}
-    <label class="f">Qu'est-ce que c'est ?
-      <input id="fNom" list="noms" placeholder="Ex. : viande hachée" autocomplete="off">
-      <datalist id="noms">${names.map(n => `<option value="${esc(n)}">`).join("")}</datalist></label>
-    <button type="button" class="ghost scanbtn" id="fScan"><span aria-hidden="true">📷</span> Scanner le code-barre</button>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem"><label for="fNom">Qu'est-ce que c'est ?</label>
+      <div class="namerow">
+        <input id="fNom" list="noms" placeholder="Ex. : viande hachée" autocomplete="off">
+        <button type="button" class="scanbtn" id="fScan" aria-label="Scanner le code-barre" title="Scanner le code-barre"><span>📷</span><small>Scanner</small></button>
+      </div>
+      <datalist id="noms">${names.map(n => `<option value="${esc(n)}">`).join("")}</datalist></div>
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Catégorie
       <div class="cats" id="fCats">${CATS.map(c => `<button type="button" class="cat" data-c="${c.id}" aria-pressed="${c.id === cat}"><span>${c.ic}</span>${c.nom}</button>`).join("")}</div></div>
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Quantité
@@ -359,9 +366,9 @@ function openAdd() {
       $("#fNom").value = known.nom; setCat(known.cat); $("#fUnite").value = known.unite;
       $("#fTiroir").value = Math.min(known.tiroir, state.tiroirs); toast("Produit reconnu"); return;
     }
-    const btn = $("#fScan"); btn.disabled = true; btn.lastChild.textContent = " Recherche du produit…";
+    const btn = $("#fScan"), nomIn = $("#fNom"); btn.disabled = true; nomIn.placeholder = "Recherche du produit…";
     const info = await chercherProduit(found);
-    btn.disabled = false; btn.lastChild.textContent = " Scanner le code-barre";
+    btn.disabled = false; nomIn.placeholder = "Ex. : viande hachée";
     if (!$("#fNom")) return;
     if (info) { $("#fNom").value = info.nom; if (info.cat) setCat(info.cat); toast("Produit trouvé"); }
     else { $("#fNom").focus(); toast("Produit inconnu, écrivez son nom"); }
