@@ -143,6 +143,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; fon
 .tirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
 .tir { border: 2px solid var(--line); background: var(--surface); border-radius: 14px; padding: 14px 6px; font-weight: 700; font-size: 1rem; }
 .tir[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.tirbtn { border-color: var(--danger) !important; }
+.tirbtn small, .tirbtn strong { color: var(--danger); }
+.tirbtn strong { font-size: 1.15rem; }
 .metabtn { text-align: left; background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 10px 12px; }
 .metabtn small { display: block; color: var(--accent); font-size: .8rem; }
 .metabtn strong { font-size: 1rem; }
@@ -538,7 +541,7 @@ function openItem(n) {
     <div class="detail-meta">
       <div><small>Congelé le</small><strong>${fmtDate(i.date)}</strong></div>
       <div><small>Depuis</small><strong>${ageText(ageDays(i.date))}</strong></div>
-      <button type="button" class="metabtn" id="dTir"><small>Rangement · modifier</small><strong>Tiroir ${i.tiroir}</strong></button>
+      <button type="button" class="metabtn tirbtn" id="dTir"><small>Rangement · modifier</small><strong>Tiroir ${i.tiroir}</strong></button>
       <button type="button" class="metabtn" id="dCat"><small>Catégorie · modifier</small><strong>${c.ic} ${c.nom}</strong></button>
     </div>
     <div class="tirs" id="dTirs" hidden>${Array.from({ length: Math.max(state.tiroirs, i.tiroir) }, (_, k) => `<button type="button" class="tir" data-t="${k + 1}" aria-pressed="${k + 1 === i.tiroir}">Tiroir ${k + 1}</button>`).join("")}</div>
