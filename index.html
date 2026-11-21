@@ -129,6 +129,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; fon
 .catline { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
 .catline b { font-weight: 700; }
 .linkbtn { border: none; background: none; color: var(--accent); font-weight: 700; padding: 4px 0; font-size: .95rem; }
+.tirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.tir { border: 2px solid var(--line); background: var(--surface); border-radius: 14px; padding: 14px 6px; font-weight: 700; font-size: 1rem; }
+.tir[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .metabtn { text-align: left; background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 10px 12px; }
 .metabtn small { display: block; color: var(--accent); font-size: .8rem; }
 .metabtn strong { font-size: 1rem; }
@@ -500,9 +503,10 @@ function openItem(n) {
     <div class="detail-meta">
       <div><small>Congelé le</small><strong>${fmtDate(i.date)}</strong></div>
       <div><small>Depuis</small><strong>${ageText(ageDays(i.date))}</strong></div>
-      <div><small>Rangement</small><strong>Tiroir ${i.tiroir}</strong></div>
+      <button type="button" class="metabtn" id="dTir"><small>Rangement · modifier</small><strong>Tiroir ${i.tiroir}</strong></button>
       <button type="button" class="metabtn" id="dCat"><small>Catégorie · modifier</small><strong>${c.ic} ${c.nom}</strong></button>
     </div>
+    <div class="tirs" id="dTirs" hidden>${Array.from({ length: Math.max(state.tiroirs, i.tiroir) }, (_, k) => `<button type="button" class="tir" data-t="${k + 1}" aria-pressed="${k + 1 === i.tiroir}">Tiroir ${k + 1}</button>`).join("")}</div>
     <div class="cats" id="dCats" hidden>${CATS.map(k => `<button type="button" class="cat" data-c="${k.id}" aria-pressed="${k.id === i.cat}"><span>${k.ic}</span>${k.nom}</button>`).join("")}</div>
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Combien en reste-t-il ?
       <div class="stepper"><button type="button" id="dMoins" aria-label="Moins">−</button>
@@ -510,7 +514,13 @@ function openItem(n) {
         <button type="button" id="dPlus" aria-label="Plus">+</button></div></div>
     <button class="primary" id="dOk">Enregistrer</button>
     <div id="dDel"><button class="danger" id="dAll" style="width:100%">Tout est mangé, retirer du congélateur</button></div>`);
-  $("#dCat").onclick = () => { $("#dCats").hidden = !$("#dCats").hidden; };
+  $("#dCat").onclick = () => { $("#dTirs").hidden = true; $("#dCats").hidden = !$("#dCats").hidden; };
+  $("#dTir").onclick = () => { $("#dCats").hidden = true; $("#dTirs").hidden = !$("#dTirs").hidden; };
+  $("#dTirs").addEventListener("click", e => {
+    const b = e.target.closest(".tir"); if (!b) return;
+    updateDoc(doc(produitsRef, String(n)), { tiroir: +b.dataset.t }).catch(denied);
+    close(); toast(`Rangé dans le tiroir ${b.dataset.t}`);
+  });
   $("#dCats").addEventListener("click", e => {
     const b = e.target.closest(".cat"); if (!b) return;
     updateDoc(doc(produitsRef, String(n)), { cat: b.dataset.c }).catch(denied);
