@@ -143,6 +143,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; fon
 .tirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
 .tir { border: 2px solid var(--line); background: var(--surface); border-radius: 14px; padding: 14px 6px; font-weight: 700; font-size: 1rem; }
 .tir[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.tirtag { color: var(--danger); font-weight: 700; }
 .tirbtn { border-color: var(--danger) !important; }
 .tirbtn small, .tirbtn strong { color: var(--danger); }
 .tirbtn strong { font-size: 1.15rem; }
@@ -355,7 +356,7 @@ function render() {
     return `<div class="swipe" data-n="${i.n}"><button class="del" data-del="${i.n}" tabindex="-1"><span>🗑️</span>Retirer</button><button class="item" data-n="${i.n}">
       <div class="num"><small>N°</small><b>${i.n}</b></div>
       <div class="info"><div class="name">${c.ic} ${esc(i.nom)}</div>
-        <div class="meta">Tiroir ${i.tiroir} · ${fmtCourt(i.date)}</div></div>
+        <div class="meta"><span class="tirtag">Tiroir ${i.tiroir}</span> · ${fmtCourt(i.date)}</div></div>
       <div><div class="age ${d > 180 ? "old" : ""}">${ageText(d)}</div><div class="qty">× ${i.qte}</div></div>
     </button></div>`;
   }).join("") : `<div class="empty">${total ? "Aucun produit ne correspond." : "Le congélateur est vide.<br>Touchez « Ajouter un produit » pour commencer."}</div>`;
