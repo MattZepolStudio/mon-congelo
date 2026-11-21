@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mon Congélo</title>
+<meta name="theme-color" content="#1f6fb2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Congélo">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout : une seule colonne façon appli mobile, liste de cartes + gros bouton d'ajout flottant */
+:root {
+  --bg: #eef3f7; --surface: #ffffff; --fg: #15232f; --muted: #5d6f7e; --line: #d8e2ea;
+  --accent: #1f6fb2; --accent-soft: #dcebf7; --on-accent: #ffffff;
+  --warn: #c76a10; --warn-soft: #fdeedd; --danger: #c0392b; --danger-soft: #fbe3e0;
+  --shadow: 0 1px 2px rgba(21,35,47,.06), 0 4px 14px rgba(21,35,47,.06);
+  --display: "Outfit", "Segoe UI", system-ui, sans-serif;
+  --body: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1820; --surface: #182531; --fg: #e8f0f6; --muted: #93a6b6; --line: #2a3a48;
+  --accent: #5aa9e6; --accent-soft: #1d3446; --on-accent: #0b1620;
+  --warn: #f0a25a; --warn-soft: #3a2a18; --danger: #ef7b6e; --danger-soft: #3d2220;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1820; --surface: #182531; --fg: #e8f0f6; --muted: #93a6b6; --line: #2a3a48;
+  --accent: #5aa9e6; --accent-soft: #1d3446; --on-accent: #0b1620;
+  --warn: #f0a25a; --warn-soft: #3a2a18; --danger: #ef7b6e; --danger-soft: #3d2220;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+.login { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px; max-width: 420px; margin: 0 auto; }
+.login .logo { font-size: 5rem; line-height: 1; }
+.login p { color: var(--muted); margin: 0; }
+.login .primary { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.login .err { color: var(--danger); font-weight: 600; }
+.account { color: var(--muted); font-size: .9rem; text-align: center; margin: 0; overflow-wrap: anywhere; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 17px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 120px; }
+.wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { font-family: var(--display); font-size: 1.9rem; margin: 0; letter-spacing: -.01em; }
+.sub { color: var(--muted); font-size: .95rem; margin: 2px 0 0; }
+.icon-btn { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .75rem; color: var(--muted); }
+.icon-btn span { font-size: 1.3rem; line-height: 1; }
+
+.demo { background: var(--accent-soft); color: var(--fg); border-radius: 14px; padding: 10px 14px; font-size: .9rem; }
+
+.search { position: relative; }
+.search input { width: 100%; padding: 14px 16px 14px 46px; border-radius: 16px; border: 1px solid var(--line);
+  background: var(--surface); font-size: 1.05rem; }
+.search svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--muted); }
+
+.tools { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px;
+  font-size: .95rem; font-weight: 600; white-space: nowrap; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.sortbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); font-size: .95rem; }
+.sort { border: none; background: none; color: var(--accent); font-weight: 700; padding: 6px 0; }
+
+.list { display: flex; flex-direction: column; gap: 10px; }
+.item { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 12px; box-shadow: var(--shadow); width: 100%; }
+.num { width: 64px; height: 64px; border-radius: 14px; background: var(--accent-soft); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-family: var(--display); }
+.num b { font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.num small { font-size: .7rem; color: var(--muted); font-family: var(--body); }
+.info { min-width: 0; }
+.name { font-weight: 700; font-size: 1.1rem; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: .9rem; }
+.age { font-size: .85rem; font-weight: 700; border-radius: 999px; padding: 3px 10px; background: var(--accent-soft); color: var(--accent); justify-self: end; white-space: nowrap; }
+.age.old { background: var(--warn-soft); color: var(--warn); }
+.qty { font-weight: 700; font-size: .95rem; text-align: right; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.empty { text-align: center; color: var(--muted); padding: 40px 16px; background: var(--surface); border-radius: 18px; border: 1px dashed var(--line); }
+
+.fab { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--accent); color: var(--on-accent); border: none; border-radius: 999px; padding: 16px 30px;
+  font-size: 1.15rem; font-weight: 700; box-shadow: 0 6px 20px rgba(31,111,178,.35); display: flex; gap: 10px; align-items: center; }
+.fab span { font-size: 1.5rem; line-height: 1; }
+
+/* Feuilles (modales) */
+.backdrop { position: fixed; inset: 0; background: rgba(10,20,30,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+.sheet { background: var(--bg); width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 24px 24px 0 0;
+  padding: 20px max(18px, env(safe-area-inset-left, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+.sheet h2 { font-family: var(--display); font-size: 1.5rem; margin: 0; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.close { border: none; background: var(--surface); border-radius: 999px; width: 44px; height: 44px; font-size: 1.3rem; }
+label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: .95rem; }
+.f input, .f select { padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 1.05rem; width: 100%; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cat { border: 2px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: .85rem; font-weight: 600; }
+.cat span { font-size: 1.6rem; }
+.cat[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.stepper { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 10px; }
+.stepper button { width: 64px; height: 64px; border-radius: 16px; border: none; background: var(--accent-soft); color: var(--accent); font-size: 2rem; font-weight: 700; }
+.stepper output { font-family: var(--display); font-size: 2rem; font-weight: 700; text-align: center; flex: 1; font-variant-numeric: tabular-nums; }
+.stepper output small { display: block; font-family: var(--body); font-size: .85rem; color: var(--muted); font-weight: 500; }
+.primary { background: var(--accent); color: var(--on-accent); border: none; border-radius: 16px; padding: 16px; font-size: 1.1rem; font-weight: 700; }
+.ghost { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; font-size: 1rem; font-weight: 600; }
+.danger { background: var(--danger-soft); color: var(--danger); border: none; border-radius: 16px; padding: 14px; font-size: 1rem; font-weight: 700; }
+.bignum { text-align: center; padding: 10px 0; }
+.bignum b { display: block; font-family: var(--display); font-size: 6rem; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.hint { color: var(--muted); font-size: .95rem; text-align: center; margin: 0; }
+.detail-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.detail-meta div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.detail-meta small { display: block; color: var(--muted); font-size: .8rem; }
+.detail-meta strong { font-size: 1rem; }
+.confirm { background: var(--danger-soft); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.confirm p { margin: 0; font-weight: 600; }
+.row { display: flex; gap: 10px; } .row > * { flex: 1; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 600; z-index: 30; font-size: .95rem; }
+@media (max-width: 380px) { .cats { grid-template-columns: repeat(2, 1fr); } }
+@media (prefers-reduced-motion: no-preference) { .sheet { animation: up .22s ease-out; } @keyframes up { from { transform: translateY(30px); opacity: .6; } } }
+</style>
+</head>
+<body>
+
+<section class="login" id="login" hidden>
+  <div class="logo">🧊</div>
+  <h1>Mon Congélo</h1>
+  <p id="loginMsg">Connectez-vous pour voir ce qu'il y a dans le congélateur.</p>
+  <button class="primary" id="btnLogin">Se connecter avec Google</button>
+  <button class="ghost" id="btnLogout2" hidden>Changer de compte</button>
+</section>
+
+
+<div class="wrap" id="main" hidden>
+  <header>
+    <div>
+      <h1>Mon Congélo</h1>
+      <p class="sub" id="count"></p>
+    </div>
+    <button class="icon-btn" id="btnSettings" aria-label="Réglages"><span>⚙️</span>Réglages</button>
+  </header>
+
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7" fill="none"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Rechercher (poulet, soupe…)" autocomplete="off">
+  </div>
+
+  <div class="tools" id="filters"></div>
+
+  <div class="sortbar">
+    <span id="sortLabel"></span>
+    <button class="sort" id="btnSort">⇅ Inverser</button>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<button class="fab" id="btnAdd" hidden><span>＋</span> Ajouter un produit</button>
+<div id="modal"></div>
+<div id="toastHost"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, collection, doc, onSnapshot, runTransaction, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const CATS = [
+  { id: "viande", nom: "Viande", ic: "🥩" },
+  { id: "poisson", nom: "Poisson", ic: "🐟" },
+  { id: "legumes", nom: "Légumes", ic: "🥦" },
+  { id: "plats", nom: "Plats maison", ic: "🍲" },
+  { id: "pain", nom: "Pain, desserts", ic: "🥖" },
+  { id: "autre", nom: "Autre", ic: "📦" },
+];
+const catOf = id => CATS.find(c => c.id === id) || CATS[5];
+const UNITS = ["portions", "sachets", "pièces", "g"];
+
+function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+// ===== Firebase =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAWS8VdMR-0W59mJauIOW1rY5w7XuHA8ng",
+  authDomain: "congelo-3d81f.firebaseapp.com",
+  projectId: "congelo-3d81f",
+  storageBucket: "congelo-3d81f.firebasestorage.app",
+  messagingSenderId: "608885971584",
+  appId: "1:608885971584:web:4299e9d11cd7f06f172465"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = initializeFirestore(app, { localCache: persistentLocalCache() });
+const produitsRef = collection(db, "produits");
+const reglagesRef = doc(db, "reglages", "general");
+
+let state = { items: [], tiroirs: 3 };
+let unsubs = [];
+let loaded = { produits: false, reglages: false };
+
+function showLogin(msg, wrongAccount) {
+  $("#main").hidden = true; $("#btnAdd").hidden = true; $("#login").hidden = false;
+  $("#loginMsg").textContent = msg || "Connectez-vous pour voir ce qu'il y a dans le congélateur.";
+  $("#loginMsg").className = wrongAccount ? "err" : "";
+  $("#btnLogin").hidden = !!wrongAccount; $("#btnLogout2").hidden = !wrongAccount;
+}
+function showApp() { $("#login").hidden = true; $("#main").hidden = false; $("#btnAdd").hidden = false; }
+
+function denied(err) {
+  console.error(err);
+  unsubs.forEach(u => u()); unsubs = [];
+  if (err && err.code === "permission-denied")
+    showLogin(`Le compte ${auth.currentUser?.email || ""} n'a pas accès à ce congélateur.`, true);
+  else toast("Problème de connexion, réessayez");
+}
+
+onAuthStateChanged(auth, user => {
+  unsubs.forEach(u => u()); unsubs = [];
+  if (!user) return showLogin();
+  showApp();
+  $("#count").textContent = "Chargement…";
+  loaded = { produits: false, reglages: false };
+  unsubs.push(onSnapshot(produitsRef, snap => {
+    state.items = snap.docs.map(d => d.data()); loaded.produits = true; render();
+  }, denied));
+  unsubs.push(onSnapshot(reglagesRef, snap => {
+    state.tiroirs = snap.data()?.tiroirs || 3; loaded.reglages = true; render();
+  }, denied));
+});
+
+async function login() {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  try { await signInWithPopup(auth, provider); }
+  catch (e) {
+    if (["auth/popup-blocked", "auth/operation-not-supported-in-this-environment", "auth/cancelled-popup-request"].includes(e.code))
+      return signInWithRedirect(auth, provider);
+    if (e.code !== "auth/popup-closed-by-user") { console.error(e); showLogin("La connexion n'a pas marché. Réessayez."); }
+  }
+}
+
+async function ajouterProduit(p) {
+  return runTransaction(db, async tx => {
+    const r = await tx.get(reglagesRef);
+    const maxN = state.items.reduce((m, i) => Math.max(m, i.n), 0);
+    const n = Math.max(r.data()?.next || 1, maxN + 1);
+    tx.set(reglagesRef, { next: n + 1 }, { merge: true });
+    tx.set(doc(produitsRef, String(n)), { ...p, n });
+    return n;
+  });
+}
+
+let ui = { q: "", cat: "tous", oldestFirst: true };
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function ageDays(date) { return Math.floor((Date.now() - new Date(date + "T12:00:00")) / 86400000); }
+function ageText(d) {
+  if (d <= 0) return "Aujourd'hui";
+  if (d === 1) return "Hier";
+  if (d < 31) return d + " jours";
+  const m = Math.floor(d / 30.4);
+  if (m < 12) return m + " mois";
+  const y = Math.floor(m / 12), r = m % 12;
+  return y + " an" + (y > 1 ? "s" : "") + (r ? " " + r + " mois" : "");
+}
+const unit = (q, u) => q <= 1 && u !== "g" ? u.replace(/s$/, "") : u;
+const fmtDate = s => new Date(s + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+function render() {
+  if (!loaded.produits) return;
+  const total = state.items.length;
+  $("#count").textContent = total ? `${total} produit${total > 1 ? "s" : ""} au congélateur` : "Congélateur vide";
+
+  $("#filters").innerHTML = [{ id: "tous", nom: "Tout", ic: "" }, ...CATS]
+    .map(c => `<button class="chip" data-cat="${c.id}" aria-pressed="${ui.cat === c.id}">${c.ic} ${c.nom}</button>`).join("");
+
+  $("#sortLabel").textContent = ui.oldestFirst ? "Les plus anciens en premier" : "Les plus récents en premier";
+
+  const q = ui.q.trim().toLowerCase();
+  let items = state.items.filter(i =>
+    (ui.cat === "tous" || i.cat === ui.cat) &&
+    (!q || i.nom.toLowerCase().includes(q) || String(i.n) === q));
+  items.sort((a, b) => ui.oldestFirst ? a.date.localeCompare(b.date) || a.n - b.n : b.date.localeCompare(a.date) || b.n - a.n);
+
+  $("#list").innerHTML = items.length ? items.map(i => {
+    const d = ageDays(i.date), c = catOf(i.cat);
+    return `<button class="item" data-n="${i.n}">
+      <div class="num"><small>N°</small><b>${i.n}</b></div>
+      <div class="info"><div class="name">${c.ic} ${esc(i.nom)}</div>
+        <div class="meta">Tiroir ${i.tiroir} · congelé le ${fmtDate(i.date)}</div></div>
+      <div><div class="age ${d > 180 ? "old" : ""}">${ageText(d)}</div><div class="qty">${i.qte} ${unit(i.qte, i.unite)}</div></div>
+    </button>`;
+  }).join("") : `<div class="empty">${total ? "Aucun produit ne correspond." : "Le congélateur est vide.<br>Touchez « Ajouter un produit » pour commencer."}</div>`;
+}
+
+function toast(msg) {
+  $("#toastHost").innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`;
+  clearTimeout(toast.t); toast.t = setTimeout(() => $("#toastHost").innerHTML = "", 2200);
+}
+function close() { $("#modal").innerHTML = ""; }
+function open(html) {
+  $("#modal").innerHTML = `<div class="backdrop" id="bd"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  $("#bd").addEventListener("click", e => { if (e.target.id === "bd") close(); });
+}
+const head = t => `<div class="sheet-head"><h2>${t}</h2><button class="close" data-close aria-label="Fermer">✕</button></div>`;
+
+/* Ajout */
+function openAdd() {
+  const names = [...new Set(state.items.map(i => i.nom))].sort();
+  const tiroirs = Array.from({ length: state.tiroirs }, (_, k) => `<option value="${k + 1}">Tiroir ${k + 1}</option>`).join("");
+  let cat = "viande", qte = 1;
+  open(`${head("Nouveau produit")}
+    <label class="f">Qu'est-ce que c'est ?
+      <input id="fNom" list="noms" placeholder="Ex. : viande hachée" autocomplete="off">
+      <datalist id="noms">${names.map(n => `<option value="${esc(n)}">`).join("")}</datalist></label>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Catégorie
+      <div class="cats" id="fCats">${CATS.map(c => `<button type="button" class="cat" data-c="${c.id}" aria-pressed="${c.id === cat}"><span>${c.ic}</span>${c.nom}</button>`).join("")}</div></div>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Quantité
+      <div class="stepper"><button type="button" id="fMoins" aria-label="Moins">−</button>
+        <output id="fQte">1</output><button type="button" id="fPlus" aria-label="Plus">+</button></div></div>
+    <div class="grid2">
+      <label class="f">Unité<select id="fUnite">${UNITS.map(u => `<option>${u}</option>`).join("")}</select></label>
+      <label class="f">Rangement<select id="fTiroir">${tiroirs}</select></label>
+    </div>
+    <label class="f">Date de congélation<input id="fDate" type="date" value="${daysAgo(0)}"></label>
+    <button class="primary" id="fOk">Ajouter au congélateur</button>`);
+  const sheet = $(".sheet");
+  sheet.querySelector("#fCats").addEventListener("click", e => {
+    const b = e.target.closest(".cat"); if (!b) return;
+    cat = b.dataset.c; sheet.querySelectorAll(".cat").forEach(x => x.setAttribute("aria-pressed", x === b));
+  });
+  sheet.querySelector("#fNom").addEventListener("change", e => {
+    const prev = [...state.items].reverse().find(i => i.nom.toLowerCase() === e.target.value.trim().toLowerCase());
+    if (prev) { cat = prev.cat; sheet.querySelectorAll(".cat").forEach(x => x.setAttribute("aria-pressed", x.dataset.c === cat));
+      $("#fUnite").value = prev.unite; $("#fTiroir").value = Math.min(prev.tiroir, state.tiroirs); }
+  });
+  const upd = () => $("#fQte").textContent = qte;
+  $("#fMoins").onclick = () => { qte = Math.max(1, qte - 1); upd(); };
+  $("#fPlus").onclick = () => { qte++; upd(); };
+  $("#fOk").onclick = () => {
+    const nom = $("#fNom").value.trim();
+    if (!nom) { $("#fNom").focus(); $("#fNom").placeholder = "Indiquez le nom du produit"; return; }
+    const b = $("#fOk"); b.disabled = true; b.textContent = "Enregistrement…";
+    ajouterProduit({ nom, cat, tiroir: +$("#fTiroir").value, qte, unite: $("#fUnite").value, date: $("#fDate").value || daysAgo(0) })
+      .then(n => showNumber(n, nom))
+      .catch(e => { console.error(e); b.disabled = false; b.textContent = "Ajouter au congélateur"; toast("Pas de connexion, réessayez"); });
+  };
+  setTimeout(() => $("#fNom").focus(), 50);
+}
+
+function showNumber(n, nom) {
+  open(`${head("C'est noté !")}
+    <p class="hint">Écrivez ce numéro sur le sachet de <strong>${esc(nom)}</strong></p>
+    <div class="bignum"><b>${n}</b></div>
+    <p class="hint">Au marqueur permanent, sur une zone bien visible.</p>
+    <button class="primary" data-close>C'est écrit</button>`);
+}
+
+/* Détail : ajuster la quantité, supprimer */
+function openItem(n) {
+  const i = state.items.find(x => x.n === n); if (!i) return;
+  const c = catOf(i.cat);
+  let qte = i.qte;
+  open(`${head(`N° ${i.n}`)}
+    <div class="name" style="font-size:1.4rem">${c.ic} ${esc(i.nom)}</div>
+    <div class="detail-meta">
+      <div><small>Congelé le</small><strong>${fmtDate(i.date)}</strong></div>
+      <div><small>Depuis</small><strong>${ageText(ageDays(i.date))}</strong></div>
+      <div><small>Rangement</small><strong>Tiroir ${i.tiroir}</strong></div>
+      <div><small>Catégorie</small><strong>${c.nom}</strong></div>
+    </div>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Combien en reste-t-il ?
+      <div class="stepper"><button type="button" id="dMoins" aria-label="Moins">−</button>
+        <output id="dQte">${qte}<small>${i.unite}</small></output>
+        <button type="button" id="dPlus" aria-label="Plus">+</button></div></div>
+    <button class="primary" id="dOk">Enregistrer</button>
+    <div id="dDel"><button class="danger" id="dAll" style="width:100%">Tout est mangé, retirer du congélateur</button></div>`);
+  const upd = () => { $("#dQte").innerHTML = `${qte}<small>${i.unite}</small>`; $("#dOk").textContent = qte === 0 ? "Retirer du congélateur" : "Enregistrer"; };
+  $("#dMoins").onclick = () => { qte = Math.max(0, qte - 1); upd(); };
+  $("#dPlus").onclick = () => { qte++; upd(); };
+  const askDelete = () => {
+    $("#dDel").innerHTML = `<div class="confirm"><p>Retirer « ${esc(i.nom)} » (n° ${i.n}) de la liste ?</p>
+      <div class="row"><button class="ghost" id="cNo">Annuler</button><button class="danger" id="cYes">Oui, retirer</button></div></div>`;
+    $("#cNo").onclick = () => openItem(n);
+    $("#cYes").onclick = () => { deleteDoc(doc(produitsRef, String(n))).catch(denied); close(); toast(`N° ${n} retiré du congélateur`); };
+  };
+  $("#dAll").onclick = askDelete;
+  $("#dOk").onclick = () => {
+    if (qte === 0) return askDelete();
+    updateDoc(doc(produitsRef, String(n)), { qte }).catch(denied); close(); toast("Quantité mise à jour");
+  };
+}
+
+/* Réglages */
+function openSettings() {
+  open(`${head("Réglages")}
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Nombre de tiroirs du congélateur
+      <div class="stepper"><button type="button" id="sMoins" aria-label="Moins">−</button>
+        <output id="sT">${state.tiroirs}</output><button type="button" id="sPlus" aria-label="Plus">+</button></div></div>
+    <button class="primary" data-close>Terminé</button>
+    <p class="account">Connecté avec ${esc(auth.currentUser?.email || "")}</p>
+    <button class="ghost" id="sOut">Se déconnecter</button>`);
+  const upd = () => { $("#sT").textContent = state.tiroirs; setDoc(reglagesRef, { tiroirs: state.tiroirs }, { merge: true }).catch(denied); };
+  $("#sMoins").onclick = () => { state.tiroirs = Math.max(1, state.tiroirs - 1); upd(); };
+  $("#sPlus").onclick = () => { state.tiroirs = Math.min(12, state.tiroirs + 1); upd(); };
+  $("#sOut").onclick = () => { close(); signOut(auth); };
+}
+
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-close]")) return close();
+  const chip = e.target.closest(".chip"); if (chip) { ui.cat = chip.dataset.cat; render(); return; }
+  const item = e.target.closest(".item"); if (item) return openItem(+item.dataset.n);
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+$("#q").addEventListener("input", e => { ui.q = e.target.value; render(); });
+$("#btnSort").onclick = () => { ui.oldestFirst = !ui.oldestFirst; render(); };
+$("#btnAdd").onclick = openAdd;
+$("#btnSettings").onclick = openSettings;
+$("#btnLogin").onclick = login;
+$("#btnLogout2").onclick = () => signOut(auth).then(login);
+</script>
+</body>
+</html>
