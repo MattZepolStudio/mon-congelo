@@ -126,6 +126,11 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; fon
 .ghost { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; font-size: 1rem; font-weight: 600; }
 .danger { background: var(--danger-soft); color: var(--danger); border: none; border-radius: 16px; padding: 14px; font-size: 1rem; font-weight: 700; }
 .bignum { text-align: center; padding: 10px 0; }
+.sheet-head h2:has(.numbadge) { display: flex; align-items: center; gap: 12px; }
+.numbadge { display: inline-flex; align-items: baseline; gap: 4px; background: #c0392b; color: #fff; border-radius: 16px; padding: 6px 16px 8px;
+  font-family: var(--display); font-size: 2.4rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.numbadge small { font-size: 1rem; font-weight: 600; opacity: .9; }
+.numcap { font-family: var(--body); font-size: .85rem; font-weight: 600; color: var(--muted); line-height: 1.25; }
 .bignum b { display: block; font-family: var(--display); font-size: 6rem; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
 .hint { color: var(--muted); font-size: .95rem; text-align: center; margin: 0; }
 .detail-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -533,12 +538,12 @@ function openItem(n) {
   const i = state.items.find(x => x.n === n); if (!i) return;
   const c = catOf(i.cat);
   let qte = i.qte;
-  open(`${head(`N° ${i.n}`)}
+  open(`${head(`<span class="numbadge"><small>N°</small>${i.n}</span><span class="numcap">Numéro écrit<br>sur le sachet</span>`)}
     <div class="name" style="font-size:1.4rem">${c.ic} ${esc(i.nom)}</div>
     <div class="detail-meta">
       <div><small>Congelé le</small><strong>${fmtDate(i.date)}</strong></div>
       <div><small>Depuis</small><strong>${ageText(ageDays(i.date))}</strong></div>
-      <button type="button" class="metabtn" id="dTir"><small>Rangement · modifier</small><strong>Tiroir ${i.tiroir}</strong></button>
+      <button type="button" class="metabtn" id="dTir"><small>Rangement · modifier</small><strong>🗄️ Tiroir ${i.tiroir}</strong></button>
       <button type="button" class="metabtn" id="dCat"><small>Catégorie · modifier</small><strong>${c.ic} ${c.nom}</strong></button>
     </div>
     <div class="tirs" id="dTirs" hidden>${Array.from({ length: Math.max(state.tiroirs, i.tiroir) }, (_, k) => `<button type="button" class="tir" data-t="${k + 1}" aria-pressed="${k + 1 === i.tiroir}">Tiroir ${k + 1}</button>`).join("")}</div>
