@@ -134,10 +134,11 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-weight: 600; fon
 .scanbtn:disabled { opacity: .5; }
 .scanner { position: fixed; inset: 0; z-index: 40; background: #000; display: flex; flex-direction: column; }
 .scanner #reader { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.scanner #reader #qr-shaded-region { display: none !important; }
 .scanner #reader video { width: 100% !important; height: 100% !important; object-fit: cover; }
 .scanner .bar { padding: 16px max(16px, env(safe-area-inset-left, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; text-align: center; color: #fff; background: #000; }
 .scanner .bar p { margin: 0; font-weight: 600; }
-.scanner .aim { position: absolute; left: 10%; right: 10%; top: 38%; height: 18%; border: 3px solid #fff; border-radius: 14px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.35); pointer-events: none; }
+.scanner .aim { position: absolute; left: 6%; right: 6%; top: 28%; height: 32%; border: 3px solid #fff; border-radius: 14px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.35); pointer-events: none; }
 @media (max-width: 380px) { .cats { grid-template-columns: repeat(2, 1fr); } }
 @media (prefers-reduced-motion: no-preference) { .sheet { animation: up .22s ease-out; } @keyframes up { from { transform: translateY(30px); opacity: .6; } } }
 </style>
@@ -418,7 +419,7 @@ async function scanner(onCode) {
     const L = window.__Html5QrcodeLibrary__ || window, F = L.Html5QrcodeSupportedFormats;
     qr = new L.Html5Qrcode("reader", { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], verbose: false,
       experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
-    await qr.start({ facingMode: "environment" }, { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.8), height: Math.floor(h * 0.18) }) },
+    await qr.start({ facingMode: "environment" }, { fps: 12 },
       text => { if (done) return; navigator.vibrate?.(80); stop(); onCode(text); }, () => {});
     if (done) { stop(); return; }
     el.querySelector("#scanMsg").textContent = "Visez le code-barre du paquet";
