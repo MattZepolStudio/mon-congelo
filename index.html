@@ -341,7 +341,7 @@ function render() {
       <div class="num"><small>N°</small><b>${i.n}</b></div>
       <div class="info"><div class="name">${c.ic} ${esc(i.nom)}</div>
         <div class="meta">Tiroir ${i.tiroir} · congelé le ${fmtDate(i.date)}</div></div>
-      <div><div class="age ${d > 180 ? "old" : ""}">${ageText(d)}</div><div class="qty">${i.qte} ${unit(i.qte, i.unite)}</div></div>
+      <div><div class="age ${d > 180 ? "old" : ""}">${ageText(d)}</div><div class="qty">× ${i.qte}</div></div>
     </button>`;
   }).join("") : `<div class="empty">${total ? "Aucun produit ne correspond." : "Le congélateur est vide.<br>Touchez « Ajouter un produit » pour commencer."}</div>`;
 }
@@ -375,10 +375,7 @@ function openAdd() {
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Quantité
       <div class="stepper"><button type="button" id="fMoins" aria-label="Moins">−</button>
         <output id="fQte">1</output><button type="button" id="fPlus" aria-label="Plus">+</button></div></div>
-    <div class="grid2">
-      <label class="f">Unité<select id="fUnite">${UNITS.map(u => `<option>${u}</option>`).join("")}</select></label>
-      <label class="f">Rangement<select id="fTiroir">${tiroirs}</select></label>
-    </div>
+    <label class="f">Rangement<select id="fTiroir">${tiroirs}</select></label>
     <label class="f">Date de congélation<input id="fDate" type="date" value="${daysAgo(0)}"></label>
     <button class="primary" id="fOk">Ajouter au congélateur</button>`);
   const sheet = $(".sheet");
@@ -401,13 +398,13 @@ function openAdd() {
   });
   sheet.querySelector("#fNom").addEventListener("change", e => {
     const prev = dejaVu(e.target.value);
-    if (prev) { $("#fUnite").value = prev.unite; $("#fTiroir").value = Math.min(prev.tiroir, state.tiroirs); }
+    if (prev) { $("#fTiroir").value = Math.min(prev.tiroir, state.tiroirs); }
   });
   $("#fScan").onclick = () => scanner(async found => {
     code = found;
     const known = [...state.items].reverse().find(i => i.code === found);
     if (known) {
-      $("#fNom").value = known.nom; if (!catManuelle) setCat(known.cat); $("#fUnite").value = known.unite;
+      $("#fNom").value = known.nom; if (!catManuelle) setCat(known.cat);
       $("#fTiroir").value = Math.min(known.tiroir, state.tiroirs); toast("Produit reconnu"); return;
     }
     const btn = $("#fScan"), nomIn = $("#fNom"); btn.disabled = true; nomIn.placeholder = "Recherche du produit…";
@@ -424,7 +421,7 @@ function openAdd() {
     const nom = $("#fNom").value.trim();
     if (!nom) { $("#fNom").focus(); $("#fNom").placeholder = "Indiquez le nom du produit"; return; }
     const b = $("#fOk"); b.disabled = true; b.textContent = "Enregistrement…";
-    ajouterProduit({ nom, cat, ...(code ? { code } : {}), tiroir: +$("#fTiroir").value, qte, unite: $("#fUnite").value, date: $("#fDate").value || daysAgo(0) })
+    ajouterProduit({ nom, cat, ...(code ? { code } : {}), tiroir: +$("#fTiroir").value, qte, date: $("#fDate").value || daysAgo(0) })
       .then(n => showNumber(n, nom))
       .catch(e => { console.error(e); b.disabled = false; b.textContent = "Ajouter au congélateur"; toast("Pas de connexion, réessayez"); });
   };
@@ -510,7 +507,7 @@ function openItem(n) {
     <div class="cats" id="dCats" hidden>${CATS.map(k => `<button type="button" class="cat" data-c="${k.id}" aria-pressed="${k.id === i.cat}"><span>${k.ic}</span>${k.nom}</button>`).join("")}</div>
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.95rem">Combien en reste-t-il ?
       <div class="stepper"><button type="button" id="dMoins" aria-label="Moins">−</button>
-        <output id="dQte">${qte}<small>${i.unite}</small></output>
+        <output id="dQte">${qte}</output>
         <button type="button" id="dPlus" aria-label="Plus">+</button></div></div>
     <button class="primary" id="dOk">Enregistrer</button>
     <div id="dDel"><button class="danger" id="dAll" style="width:100%">Tout est mangé, retirer du congélateur</button></div>`);
@@ -526,7 +523,7 @@ function openItem(n) {
     updateDoc(doc(produitsRef, String(n)), { cat: b.dataset.c }).catch(denied);
     close(); toast(`Catégorie changée : ${catOf(b.dataset.c).nom}`);
   });
-  const upd = () => { $("#dQte").innerHTML = `${qte}<small>${i.unite}</small>`; $("#dOk").textContent = qte === 0 ? "Retirer du congélateur" : "Enregistrer"; };
+  const upd = () => { $("#dQte").textContent = qte; $("#dOk").textContent = qte === 0 ? "Retirer du congélateur" : "Enregistrer"; };
   $("#dMoins").onclick = () => { qte = Math.max(0, qte - 1); upd(); };
   $("#dPlus").onclick = () => { qte++; upd(); };
   const askDelete = () => {
